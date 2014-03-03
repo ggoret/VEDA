@@ -1,0 +1,120 @@
+#!/bin/csh -f
+# makepak ************************************
+   if ($#argv < 1) then
+echo ' makepak creates tar-gzip-ed file of VEDA'
+echo ' Usage : {makepak} {VEDA_BIN}'
+exit
+   endif
+set option=${1}
+set name=`echo ${1}|sed -e 's/BIN_//'`
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cat >! $VEDA/login <<ENDOF
+# ======== include this into your .login (for csh and tcsh) ========
+
+############### setup for VEDA ###############
+
+setenv VEDA '/.../VEDA'
+# \$VEDA = whole path to VEDA directory
+
+setenv VEDA_BIN '$VEDA_BIN'
+# subdirectory within \$VEDA that contains binary files
+
+setenv VEDA_COMPILE '$VEDA_COMPILE'
+# compiler and options used to create the binary files
+
+alias veda "python -B \$VEDA/mod/Veda.py"
+
+##############################################
+
+ENDOF
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cp $VEDA/doc/VEDA_INSTALL $VEDA/VEDA_INSTALL
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+set DOC=VEDA/doc
+set MOD=VEDA/mod
+set URO=VEDA/uro
+set BIN=VEDA/${option}
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+cd $VEDA/../
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tar zcvf VEDA_${name}.tgz VEDA/login VEDA/VEDA_INSTALL $DOC/ $MOD/ $URO/ $BIN/
+mv -f VEDA_${name}.tgz $VEDA/
+echo ' '
+cat $VEDA/login
+rm -f $VEDA/login $VEDA/VEDA_INSTALL
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+exit
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+echo -n >! LisT
+cat >> LisT <<"ENDOF"
+VEDA/login
+VEDA/VEDA_INSTALL
+VEDA/doc/intkey.txt
+VEDA/doc/veda.tif
+VEDA/doc/veda.xbm
+VEDA/mod/Map.py
+VEDA/mod/Nma.py
+VEDA/mod/Veda.py
+VEDA/mod/gfx.py
+VEDA/mod/itf.py
+VEDA/mod/mod.py
+VEDA/mod/sym.py
+VEDA/mod/uro.py
+VEDA/uro/factor.d
+VEDA/uro/maitre.scr
+VEDA/uro/setup
+VEDA/uro/seturo
+"ENDOF"
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+echo 'VEDA/'$option'/cords.exe' >> LisT
+echo 'VEDA/'$option'/e2v.exe' >> LisT
+echo 'VEDA/'$option'/entorno' >> LisT
+echo 'VEDA/'$option'/esclava.a' >> LisT
+echo 'VEDA/'$option'/esclave.a' >> LisT
+echo 'VEDA/'$option'/esclavo.a' >> LisT
+echo 'VEDA/'$option'/fitin' >> LisT
+echo 'VEDA/'$option'/fitin.exe' >> LisT
+echo 'VEDA/'$option'/ncsrms.exe' >> LisT
+echo 'VEDA/'$option'/origen' >> LisT
+echo 'VEDA/'$option'/origen.exe' >> LisT
+echo 'VEDA/'$option'/propre' >> LisT
+echo 'VEDA/'$option'/propre.exe' >> LisT
+echo 'VEDA/'$option'/pv2rt' >> LisT
+echo 'VEDA/'$option'/pv2rt.exe' >> LisT
+echo 'VEDA/'$option'/refer.exe' >> LisT
+echo 'VEDA/'$option'/rmsq.exe' >> LisT
+echo 'VEDA/'$option'/rt2pv' >> LisT
+echo 'VEDA/'$option'/rt2pv.exe' >> LisT
+echo 'VEDA/'$option'/select.exe' >> LisT
+echo 'VEDA/'$option'/slave.a' >> LisT
+echo 'VEDA/'$option'/splits.exe' >> LisT
+echo 'VEDA/'$option'/stfing.exe' >> LisT
+echo 'VEDA/'$option'/symmetry.exe' >> LisT
+echo 'VEDA/'$option'/tab2i' >> LisT
+echo 'VEDA/'$option'/tab2i.exe' >> LisT
+echo 'VEDA/'$option'/udi2i' >> LisT
+echo 'VEDA/'$option'/udi2i.exe' >> LisT
+echo 'VEDA/'$option'/uro.exe' >> LisT
+echo 'VEDA/'$option'/v2d.exe' >> LisT
+echo 'VEDA/'$option'/v2dm.exe' >> LisT
+echo 'VEDA/'$option'/v2v.exe' >> LisT
+echo 'VEDA/'$option'/wholepath' >> LisT
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tar zcvf VEDA_${name}.tgz `cat LisT`
+mv -f VEDA_${name}.tgz $VEDA/
+echo ' '
+cat $VEDA/login
+rm -f LisT $VEDA/login $VEDA/VEDA_INSTALL
+echo ' '
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+exit
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#crypt "passwd" < veda_general.tgz > veda_general.tgz.crypt
+#crypt "passwd" < veda_general.tgz.crypt > veda_general.tgz
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

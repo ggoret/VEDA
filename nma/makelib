@@ -1,0 +1,40 @@
+#!/bin/csh -f
+#=======================================================================
+# makelib ************************************
+echo " VEDA_COMPILE and VEDA_BIN variables are:"
+echo "        " $VEDA_COMPILE
+echo "        " $VEDA_BIN
+set VEDABIN = $VEDA/$VEDA_BIN
+set SOURCE = $VEDA/nma
+
+#=======================================================================
+echo " "
+echo " ********** makelib **********"
+csh -f $SOURCE/nma.for | sed -e "s/\.f//" >! LisT
+if(-e esclave.a) rm -f esclave.a
+   foreach nom (`cat LisT`)
+echo $nom
+$VEDA_COMPILE $nom.f -c
+ar q esclave.a $nom.o
+rm -f $nom.f $nom.o
+   end
+rm -f LisT
+
+#=======================================================================
+echo " "
+echo " ********** makeexe **********"
+echo `grep -e '^      program ' $SOURCE/nma.for | awk '{print $2}'` >! ProG
+   foreach nom (`cat ProG`)
+ar x esclave.a ${nom}.o
+ar d esclave.a ${nom}.o
+   end
+   foreach nom (`cat ProG`)
+echo "making "${nom}.exe
+if(-e $VEDABIN/${nom}.exe) rm -f $VEDABIN/${nom}.exe
+$VEDA_COMPILE ${nom}.o esclave.a -o $VEDABIN/${nom}.exe
+rm -f ${nom}.o
+   end
+rm -f ProG esclave.a
+
+#=======================================================================
+cp -f $SOURCE/nmashift.sh $VEDABIN/ ; chmod 700 $VEDABIN/nmashift.sh

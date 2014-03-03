@@ -1,0 +1,180 @@
+#!/bin/csh -f
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   if($#argv == 0) then
+echo ''
+echo '#########################################################'
+echo ''
+echo 'Usage:'
+echo 'seturo -- emap = "FILENAME"'
+echo '       -- model = "FILENAME" # "ID" : "# MOLECULES" , "FILENAME" # "ID" : "# MOLECULES"'
+echo '       -- resol = "RESMAX" , "RESMIN"'
+echo '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+echo '-- emap = "filename of vtk-map"'
+echo '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+echo '-- model = "filename of model" # "identifier" : "# of associated independent molecules"'
+echo '           groups of "FILENAME" # "ID" : "# MOLECULES" separated by commas'
+echo '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+echo '-- resol = "resolution range to fit (in Angstroms)"'
+echo '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
+echo ''
+echo '#########################################################'
+echo ''
+echo 'example:'
+echo 'seturo --emap= emap.vtk --models= vp6.pdb # 1 : 2 --resol= 400.0 20.0'
+echo ''
+echo 'echo of interpreted input if "test" at the end of line:'
+echo '$VEDA/uro/seturo --emap= emap.vtk --models= vp6.pdb # 1 : 2 --resol= 400. 20. test'
+echo ''
+echo '#########################################################'
+echo ''
+exit
+   endif
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+set VEDABIN="$VEDA/$VEDA_BIN"
+########################################################################
+set TEST=`echo $argv | awk -F" " '{print $NF}'`
+   if(${TEST} == 'test') then
+set nb=`expr $#argv - 1`
+echo $argv[1-$nb] > InpuT
+   else
+echo $argv > InpuT
+   endif
+$VEDABIN/select.exe < InpuT >! LisT
+set STOP=`awk '{if($1 ~ /stop/){print 1}}' LisT`
+   if($STOP == 1) then
+echo ''
+echo ' >>>>> ERROR <<<<< wrong or incomplete input arguments'
+echo ''
+cat LisT
+rm -f LisT
+exit
+   endif
+set EMAP=`grep 'EMAP=' LisT | sed -e 's/EMAP=//'`
+set MODELS=`grep 'MODELS=' LisT | sed -e 's/MODELS=//'`
+set MOLECULES=`grep 'MOLECULES=' LisT | sed -e 's/MOLECULES=//'`
+set MODIDS=`grep 'IDENTIFYS=' LisT | sed -e 's/IDENTIFYS=//'`
+set RESOL=`grep 'RESOLUTION=' LisT | sed -e 's/RESOLUTION=//'`
+rm -f InpuT LisT
+########################################################################
+   if(${TEST} == 'test') then
+echo ''
+echo ' >>>>> INPUT ECHO <<<<<'
+echo ' emap : '$EMAP
+echo ' # models : '$MOLECULES[1]
+echo ' models filenames : '$MODELS
+echo -n >! modis
+echo -n >! moles
+set n='1'
+      while($n <= $#MODIDS)
+echo '#'$MODIDS[$n] >> modis
+set m=`expr $n  + 1`
+echo $MOLECULES[$m] >> moles
+set n=`expr $n  + 1`
+      end
+set MODIS=`paste -s modis`
+set MOLES=`paste -s moles`
+echo ' models IDs : '$MODIS
+echo ' # molecules to place : '$MOLES
+echo ' resolution range : '$RESOL
+rm -f modis moles
+   endif
+########################################################################
+set STOP='0'
+   if(! -e $EMAP) then
+set STOP='1'
+echo ''
+echo ' >>>>> ERROR <<<<< file '$EMAP 'does not exist'
+echo ''
+   endif
+set n='1'
+   while($n <= $MOLECULES[1])
+      if(! -e $MODELS[$n]) then
+set STOP='1'
+echo ''
+echo ' >>>>> ERROR <<<<< file '$MODELS[$n] 'does not exist'
+echo ''
+      endif
+set n=`expr $n  + 1`
+   end
+if($STOP == '1') exit
+########################################################################
+csh $VEDA/uro/setup >&/dev/null
+cp $VEDABIN/udi2i $VEDABIN/tab2i $VEDABIN/fitin e/
+########################################################################
+set namemap=`basename $EMAP`
+set namemod=`basename $MODELS[1]`
+set m=2
+   while($m <= $#MODELS)
+set namemod=`echo $namemod' + '``basename $MODELS[$m]`
+set m=`expr $m + 1`
+   end
+cat >! LisT <<"ENDOF"
+#!/bin/csh -f
+cat >! d/data.d <<ENDOF
+ ** URO ** ${namemap} ** ${namemod} ** ${RESOL} **
+CELL
+x,y,z * end
+ENDOF
+cat >> d/data.d <<ENDOF
+1                   ; orthogonalising code
+100.   0.           ; % reflections, b-add
+${RESOL}            ; resolution range
+ENDOF
+"ENDOF"
+source ./LisT ; rm -f LisT
+########################################################################
+if(${TEST} == 'test') exit
+echo -n >! STOP
+e/emft ${EMAP}
+########################################################################
+echo -n >! STOPM
+set n='1'
+   while($n <= $MOLECULES[1])
+set TYPE=`echo $MODELS[$n] | awk -F"." '{print $NF}'`
+set mod=$MODIDS[$n]
+      if(${TYPE} == 'vtk') then
+$VEDABIN/v2dm.exe <<ENDOF
+$MODELS[$n]
+d/map${mod}.d
+ENDOF
+set modeln=`$VEDABIN/wholepath $MODELS[$n]`
+ln -sf $modeln d/map${mod}.vtk
+      else
+set SKIP=`grep '^FORMAT ' $MODELS[$n] | head -1 | awk '{if($1 ~ /FORMAT/){print 1}}' -`
+         if($SKIP != '1') then
+echo 'FORMAT  (12x,a4,14x,3f8.3,6x,f6.2)' >! moles
+cat $MODELS[$n] >> moles ; mv -f moles $MODELS[$n] ; chmod 400 $MODELS[$n]
+         endif
+set modeln=`$VEDABIN/wholepath $MODELS[$n]`
+ln -sf $modeln d/xyz${mod}.d
+      endif
+e/scat ${mod}
+grep '^stop' o/tabl${mod}.s >> STOPM
+if(-e HISTT) mv HISTT HISTT-${mod}
+set n=`expr $n  + 1`
+   end
+########################################################################
+echo ''
+echo ' >>>>> END OF MAP FOURIER TRANSFORMATION <<<<<'
+cat STOP ; rm -f STOP
+echo ''
+echo ''
+echo ' >>>>> END OF MOLECULAR SCATTERING FACTORS CALCULATION <<<<<'
+cat STOPM ; rm -f STOPM
+echo ''
+########################################################################
+cat >! wilson.gp <<"ENDOF"
+set title "Wilson plot"
+set xtics rotate by 90
+set ylabel "ln(<I>)"
+set xlabel "Angstroms"
+plot 'HISTU' using 4:xtic(sprintf("%5.1f -%5.1f",$1,$3)) with linespoints pt 5 lc 1 title 'Target Map'
+"ENDOF"
+set n='1'
+   while($n <= $MOLECULES[1])
+set mod=$MODIDS[$n]
+set m=`expr $n  + 1`
+echo 'replot '\'HISTT-${mod}\'' using 4:xtic(sprintf("%5.1f -%5.1f",$1,$3)) with linespoints pt 5 lc '${m}' title '\'M$n\' >> wilson.gp
+set n=`expr $n  + 1`
+   end
+gnuplot -persist wilson.gp

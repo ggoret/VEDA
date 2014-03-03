@@ -1,0 +1,406 @@
+============================================================
+	__      ________ _____
+	\ \    / /  ____|  __ \   /\
+	 \ \  / /| |__  | |  | | /  \
+	  \ \/ / |  __| | |  | |/ /\ \
+	   \  /  | |____| |__| / ____ \
+	    \/   |______|_____/_/    \_\
+	USER'S GUIDE (Beta) for VEDA 25.10.10 	
+============================================================
+
+Content :
+
+------------------------------------------------------------
+
+[0] Introduction
+[1] Target Map and Symmetry
+	(1.1) Map
+	(1.2) Symmetry
+	(1.3) Crop
+[2] Models
+	(2.1) Browse and Add
+	(2.2) Models in detail
+[3] Molecules
+	(3.1) Select and Add
+	(3.2) Molecules in detail
+[4] Molecule placement
+	(4.1) Main interactive keys
+	(4.2) Build Constellation
+[5] Fitting Setup
+	(5.1) Configure
+	(5.2) Setup in detail
+[6] Fitting
+	(6.1) URO Refinement
+	(6.2) Interactive Fitting
+[7] Save molecules/constellations
+
+============================================================
+
+[0] Introduction :
+
+We suppose that VEDA has been installed (read the file
+VEDA_INSTALL in /VEDA/doc/).
+We also suppose that you have read the $VEDA/login file and
+set the environment variables required to execute VEDA.
+This Beta version of the user's guide give a simple way to
+perform a fit in 7 steps :
+
+1 : Load a target map and define its intrinsic symmetry.
+2 : Load models (pdb and|or map).
+3 : Add molecules to the workspace.
+4 : Place molecules within the target map and build their
+    constellation (symmetry mates).
+5 : Setup for fitting.
+6 : Launch interactive fitting and/or refinement.
+7 : Save molecules and constellations.
+
+Each of these steps refer to a section of this guide.
+Each section deals with :
+
+- How to pass the step rapidly.
+- The step in detail.
+- A short description about methods used in the step.
+
+============================================================
+
+[1] Target Map and Symmetry :
+
+We start by opening the "Target Map" wizard
+(whole-menu:|File > Target Map|). This wizard contains 3
+tabs (Map, Symmetry, Crop)
+
+------------------------------------------------------------
+
+(1.1) Map
+
+Whole-menu:|File > Target Map > Map|
+
+To load a map click on button "Browse Map-File"
+VEDA reads the density map in EZD format used in O.
+MAPMAN can be used for conversion to other formats.
+Then click on button "Load"
+
+The Density map is depicted as contour surfaces, i.e.,
+surfaces corresponding to a constant user-specified density
+value. The default "Contour Level" is 1 sigma. You may
+change this value within this wizard or afterwards in entry
+whole-menu:|Display > Map > Properties > Contour Level|
+
+The loaded map can be displayed as a standard surface, as
+points or as a wireframe, options available in option menu
+whole-menu:|File > Target Map > Map > Rendering Type|
+
+For all these representations, an opacity parameter
+controls the transparency of the surface depiction (entry
+whole-menu:|File > Target Map > Map > Opacity|)
+
+>>> WARNING : "Opacity" may not work with some graphic
+cards <<<
+
+Another feature is the modification of the EM magnification.
+Indeed, the reconstructions are not always perfectly scaled.
+The magnification may be changed in entry
+whole-menu:|File > Target Map > Map > EM Magnification|
+
+------------------------------------------------------------
+
+(1.2) Symmetry
+
+Several symmetries are available, among them icosahedral,
+octahedral, tetrahedral, dihedral, cyclic, helical and P1.
+
+In tab whole-menu:|File > Target Map > Symmetry|, chose 
+a symmetry in the "Select Symmetry" option menu.
+Then click on button "Load"
+
+For the icosahedral symmetry we implemented all settings
+having two orthogonal axes parallel to symmetry axes.
+The helical symmetry may be specified by giving the CTU
+parameters or the elementary helix parameters plus the
+number of starts.
+
+>>> WARNING : "EM magnification" does not change the helical
+rise (see "Scale in Fitting Setup) <<<
+
+------------------------------------------------------------
+
+(1.3) Crop
+
+Whole menu:|File > Target Map > Crop|
+
+If the map is too big for manipulation, it can be cropped
+manually. Cropping takes into account the FFT restrictions.
+It generates and loads the new cropped map.
+
+============================================================
+
+[2] Models :
+
+Whole menu:|File > Models|
+
+After loading a map and setting up the symmetry, one usually
+loads the models (PDB coordinates or EZD maps).
+
+------------------------------------------------------------
+
+(2.1) Browse and Add
+
+In whole-menu:|File > Models|, click on button
+"Browse File". By default the browser displays files with
+the filter *.pdb. To load a model map, change the filter to
+*.ezd.
+
+Then give a name to your model or keep the automatically
+generated name.
+
+Then click on button "Add"
+
+The loaded models do not appear in the main render window.
+Indeed, the units that compose the macromolecular assembly 
+are distinct objects in VEDA, called molecules.  
+The conceptual difference between models and molecules is 
+important, which will become clear rapidly.
+
+------------------------------------------------------------
+
+(2.2) Models in detail
+
+The models play two main roles in VEDA. First, they are
+used to create the molecules (i.e. their graphical
+representations). The second role is to allow the
+calculation of the Fourier transform of the density
+corresponding to the constellation. Indeed, the latter is
+calculated in terms of the molecular scattering factors,
+which in turn are calculated from the scattering factors
+corresponding to the individual models.
+
+============================================================
+
+[3] Molecules :
+
+Let us start by opening the "Molecules Wizard" in whole-menu
+|Assemblage > Molecules|. This wizard contains 2 tabs (Molecules
+, Constellation)
+
+------------------------------------------------------------
+
+(3.1) Select and Add
+
+In the wole-menu |Assemblage > Molecules > Molecules|
+Select fist a model on the left list of the wizard.
+Then give a name to your molecule or keep the automatically
+generated name.
+
+Then click on the button "Add".
+
+You should now see the molecule in the workspace. If not,
+explore the environment (the molecule may be out of the
+camera field of view, this is dependant of the pdb
+coordinates).
+(you can also press the key 'r'(see section 4))
+------------------------------------------------------------
+
+(3.2) Molecules in detail
+
+There are two types of molecules : the independent ones that
+are necessary and sufficient to build the whole assembly by
+applying the symmetry operations and the second type is the
+symmetric copies (called sym-mates) of the previous ones
+which compose a set called constellation.
+
+The independent molecules are the polygonal representations
+of the models in the VEDA's workspace. It is these entities,
+considered as rigid bodies, which are assembled to build
+macromolecular complexes.
+le-menu:|File > Target Map > Map > Opacity|
+Their positions within the EM Volume are specified
+internally by a rotation matrix R parametrized by the Euler
+angles (α,β,γ) and a translation vector T with  coordinates
+(x,y,z).
+
+============================================================
+
+[4] Interactive keys and molecule placement :
+
+(4.1) Main Keys
+
+------------------------------------------------------------
+
+[tab]
+toggle between camera and molecule modes. In camera mode,
+mouse events affect the camera position and focal point.
+In molecule mode, mouse events affect the molecule that have
+been picked by the mouse pointer.
+
+#Mouse
+
+[Left Button] :
+rotate the camera around its focal point (in camera mode)
+rotate the molecule picked around its origin
+(in molecule mode).
+The rotation is in the direction defined from the center of
+the render window towards the mouse position.
+
+[Middle Button] :
+translate the camera (in camera mode)
+translate the molecule (in molecule mode).
+The direction of motion is the direction the mouse moves.
+
+[Right Button] :
+zoom the camera (in camera mode)
+rotate molecules in plane (in molecule mode)
+
+[Left Button] + [Ctrl] :
+rotate the camera in view plane (in camera mode)
+
+[Middle Button] + [Ctrl] :
+zup/zdown the molecules (in molecule mode).
+
+#Miscelaneous Keys
+
+[3] :
+toggle the render window into and out of stereo mode.
+By default, red-blue stereo rendering mode.
+
+[r] :
+reset the camera view along the current view direction.
+center all objects present in the workspace and move the
+camera so that all objects are visible.
+
+------------------------------------------------------------
+
+(4.2) Building Constellation
+
+
+Once you have placed the molecules, you can build their
+constellation.
+In whole-menu |Assemblage > Molecules > Constellation|
+To generate the constellations, select all the molecules
+(button "Select All" or by clicking in the list) and click
+on button "Build Constellation"
+
+You can notice that, when you move an independent molecule,
+the set of symmetric molecules move as well in real time
+according to the symmetric operation defined before.
+
+The generation of the constellation in VEDA concerns,
+as a first step, a symmetry operator selection, which
+determines which sym-mates associated to each operator will
+be generated, and, as a second step, the building of a list
+of sym-mates (called symlist) for :
+each independent molecule ("Individual Constellation"
+checked)
+or for the complete set of independent molecules
+("Individual Constellation" unchecked).
+
+The selection of the symmetry operators consists in
+applying the symmetry operators to the positional variable
+of the center of mass of the independent molecule. If the
+combination sends the  center of mass inside the EM volume,
+the operators are retained and a sym-mate can be
+generated at these new positional variables.
+You can modulate the EM volume criteria by changing the
+"Minimal Distance to Box Edges" (in angstrom). A positive
+value for this variable decreases the EM volume.
+
+A second test computes the distance between all the sym-mate
+pairs belonging to the same constellation and checks if any
+collides. The "Collision Filter" check box allows you to
+remove from the selection the operators that generate
+collision between sym-mates if checked.
+
+============================================================
+
+[5] Setup :
+
+The fitting setup consists of preparing all the data for the
+interactive/automatic fitting.
+
+------------------------------------------------------------
+
+(5.1) Configure
+
+In whole-menu |Fitting > Setup|.
+Define the resolution range. During the following
+fitting, you will be able to work within the range that you
+just defined.
+
+Then click on the button "Configure" and wait until the red
+color in the status bar of the main window disappears.
+
+You can, if you need, change the "EM Scale", which has
+nearly the same effect as the magnification but the
+"EM Scale" affects also the parameters of helicoidal
+symmetry if used.
+
+------------------------------------------------------------
+
+(5.2) Setup in detail
+
+The fitting setup computes the Fourier transform of the
+electron density corresponding to the EM reconstruction
+and also computes the Fourier transform of the density
+corresponding to the scattering factors of the models.
+
+============================================================
+
+[6] Fitting :
+
+------------------------------------------------------------
+
+(6.1) URO Refinement
+
+In the whole-menu |Fitting > URO Refinement|
+click on the button "Refine"
+
+the "Working Resolution Range"(low and high) is set by
+default to the max and min values defined in the setup.
+
+In URO, in Each cycle all the molecules are refine
+sequentialy i.e. one molecule is refined while the others
+are fixed.
+The "Number of Cycles", set by default to the number of
+molecules, indicates the number of minimisation cycles.
+
+Each molecular position is refined iteratively. the
+"Number of iterations" representing the number of steps in
+this refinement.
+
+>>> HINT(a) : if you work with more than one molecule,
+do not enter a big number for iterations at the beginning
+of the optimisation. <<<
+
+>>> HINT(b) : if your molecules move a lot after an
+optimisation, press "Update Sym-Mates", because the
+symmetry operation list involved in the fitting may
+have changed and must be updated <<<
+
+------------------------------------------------------------
+
+(6.2) Interactive Fitting
+
+In the whole-menu |Fitting > Interactive Fitting|
+
+Press the button "Start/Stop" to launch the interactive
+fitting, then move the molecule (cf section 4). The
+correlation is calculated and displayed in real time.
+
+the "Working Resolution Range"(low and high) is set by
+default to the max and min value defined in the setup.
+
+>>> HINT : if your molecules move a lot, the
+symmetry operation list involved in the fitting may
+have changed and must be updated <<<
+
+============================================================
+
+[7] Save molecules/constellations :
+
+
+Select in the Mol List (at the right on the main window) one
+Molecule.
+In the whole-menu |File > Save| choose molecule or
+constellation.
+
+============================================================
+		       The End

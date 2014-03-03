@@ -1,0 +1,728 @@
+# to recover individual items, csh this file
+#=======================================================================
+mkdir ./d
+mkdir ./e
+mkdir ./f
+mkdir ./i
+mkdir ./o
+#=======================================================================
+echo e/magnum
+cat >e/magnum <<"ENDOF e/magnum"
+#!/bin/csh -f
+# magnum *************************************
+   if($#argv < 2) then
+echo "Usage: {e/magnum} {step} {Nstep}"
+echo "   1-step*Nstep <= scale <= 1+step*Nstep" ; exit
+   endif
+   if(! -e G0 || ! -e G1) then
+echo "DO URO-FITTING FIRST" ; exit
+   endif
+set STEP=$1
+set NSTP=$2
+set VEDABIN="$VEDA/$VEDA_BIN"
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+set EMAP=`ls -l d/emap.d | sed -e 's/.*\/home/\/home/'`
+set SPACE=`head -20 $EMAP |grep 'SPACING' |sed -e "s/SPACING//"`
+set ORIGEN=`head -20 $EMAP |grep 'ORIGIN' |sed -e "s/ORIGIN//"`
+cp -f $EMAP veda_map.vtk
+cp -f i/oicfd.i2 oicfd.i2
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+$VEDABIN/addsym G0 G1 M0
+set scale='1.0'
+set SPACING=`echo ${SPACE}`
+rm -f d/emap.d
+./e/emft veda_map.vtk
+sed -e "/CYCLES/s/.*/ 1  50 0.001 0 CYCLES/" oicfd.i2 >! i/oicfd.i2
+./e/docking M0 M1
+echo $scale' '`tail -1 M1 |sed -e 's/#//' |awk '{print $8}'`' ; '$SPACING >! MAGNA
+rm -f STOP M0 M1
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+$VEDABIN/addsym G0 G1 M0
+set n=1
+   while ($n <= $NSTP)
+set scale=`echo $n' '$STEP |awk '{print 1 - $1*$2}'`
+sed -e "s/SCALE/${scale}/" <<"EOF" >! LisT
+BEGIN {S=SCALE} {printf "%15.5f%15.5f%15.5f\n",S*$1,S*$2,S*$3}
+"EOF"
+set SPACING=`echo ${SPACE} |awk -f LisT -`
+sed -i -e "/SPACING/s/.*/SPACING ${SPACING}/" veda_map.vtk
+set ORIGIN=`echo ${ORIGEN} |awk -f LisT -`
+sed -i -e "/ORIGIN/s/.*/ORIGIN ${ORIGIN}/" veda_map.vtk
+rm -f d/emap.d
+./e/emft veda_map.vtk
+sed -e "/CYCLES/s/.*/ 1  50 0.001 0 CYCLES/" oicfd.i2 >! i/oicfd.i2
+./e/docking M0 M1
+$VEDABIN/addsym G0 M1 M0
+echo $scale' '`tail -1 M1 |sed -e 's/#//' |awk '{print $8}'`' ; '$SPACING >> MAGNA
+rm -f LisT STOP M1
+set n=`expr $n + 1`
+   end
+rm -f M0
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+$VEDABIN/addsym G0 G1 M0
+set n=1
+   while ($n <= $NSTP)
+set scale=`echo $n' '$STEP |awk '{print 1 + $1*$2}'`
+sed -e "s/SCALE/${scale}/" <<"EOF" >! LisT
+BEGIN {S=SCALE} {printf "%15.5f%15.5f%15.5f\n",S*$1,S*$2,S*$3}
+"EOF"
+set SPACING=`echo ${SPACE} |awk -f LisT -`
+sed -i -e "/SPACING/s/.*/SPACING ${SPACING}/" veda_map.vtk
+set ORIGIN=`echo ${ORIGEN} |awk -f LisT -`
+sed -i -e "/ORIGIN/s/.*/ORIGIN ${ORIGIN}/" veda_map.vtk
+rm -f d/emap.d
+./e/emft veda_map.vtk
+sed -e "/CYCLES/s/.*/ 1  50 0.001 0 CYCLES/" oicfd.i2 >! i/oicfd.i2
+./e/docking M0 M1
+$VEDABIN/addsym G0 M1 M0
+echo $scale' '`tail -1 M1 |sed -e 's/#//' |awk '{print $8}'`' ; '$SPACING >> MAGNA
+rm -f LisT STOP M1
+set n=`expr $n + 1`
+   end
+rm -f M0
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+sort -n MAGNA >! MAGNUM
+cat >! magnum.gp <<"ENDOF"
+set title "CC vs magnification"
+set xlabel "magnification scale"
+plot 'MAGNUM' using ($1):($2) with linespoints notitle
+"ENDOF"
+gnuplot -persist magnum.gp
+rm -f veda_map.vtk MAGNA
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+./e/emft $EMAP
+mv -f oicfd.i2 i/oicfd.i2
+rm -f STOP
+"ENDOF e/magnum"
+#=======================================================================
+echo e/ncsrms
+cat >e/ncsrms <<"ENDOF e/ncsrms"
+#!/bin/csh -f
+# ncsrms *************************************
+   if($#argv != 1) then
+echo "Usage: {e/ncsrms} {fiting-input}" ; exit
+   endif
+   if(! -e ${1}) then
+echo "No fiting input with this name = ${1}" ; exit
+   endif
+set VEDABIN="$VEDA/$VEDA_BIN"
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+$VEDABIN/rt2pv ${1} o/rms0.s
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+date +"%T" | sed -e "s/\://g" >! seed
+source $VEDA/$VEDA_BIN/entorno
+ln -s $cwd/d/data.d $UROF/fort.8
+ln -s $cwd/o/rms0.s $UROF/fort.1
+ln -s $cwd/seed     $UROF/fort.2
+ln -s $cwd/o/rms1.s $UROF/fort.9
+set n="1"
+   while ($n <= 100)
+      if(-e $cwd/o/tabl$n.s) then
+set m=`expr $n + 10`
+ln -s $cwd/o/tabl$n.s $UROF/fort.$m
+      endif
+set n=`expr $n + 1`
+   end
+$VEDABIN/ncsrms.exe
+rm -rf seed $UROF
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+echo ""
+echo " Now running fiting for the different trials"
+echo ""
+e/oic rms1 fit
+e/fiting fit rms2 >! log_rms
+#egrep -e "cumulated" log_rms
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+set nbody=`head -2 o/rms1.s | sed -e '/fiting/d' | awk '{print -$2}'`
+set rms='1.0'
+$VEDABIN/propre rms2 $nbody $rms
+egrep '#$' o/rms2.s|sed -e 's/#//'|sort -n -k 10,10 >! HISTR
+cat HISTR
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cat >! rmshist.gp <<"ENDOF"
+set title "RMS convergence threshold"
+set xlabel "trial #"
+plot 'HISTR' using 10 with linespoints pt 5 lc 1 title 'rms to solution'
+replot 'HISTR' using 8 with linespoints pt 5 lc 2 title '100 x CC'
+"ENDOF"
+gnuplot -persist rmshist.gp
+"ENDOF e/ncsrms"
+#=======================================================================
+echo e/norma
+cat >e/norma <<"ENDOF e/norma"
+#!/bin/csh -f
+# norma *************************************
+   if($#argv < 3) then
+echo "Usage: {e/norma} {molecule} {init-stepi <= 0} {last-step >= 0}" ; exit
+   endif
+   if($2 > 0 || $3 < 0) then
+echo "NEED 0 STEP" ; exit
+   endif
+   if(! -e N0) then
+echo "NEED N0" ; exit
+   endif
+set VEDABIN="$VEDA/$VEDA_BIN"
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+set MOLE=$1
+set INIT=$2
+set LAST=$3
+set CONF='33'
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cp -f i/oicfd.i2 oicfd.i2
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+set n=$INIT
+   while ($n <= $LAST)
+set modeln=veda_tmp/${MOLE}/out${n}
+set SKIP=`grep '^FORMAT' $modeln |head -1 |awk '{if($1 ~ /FORMAT/){print 1}}' -`
+      if($SKIP != '1') then
+echo 'FORMAT (12x,a4,14x,3f8.3,6x,f6.2)' >! moles
+cat $modeln >> moles ; mv -f moles $modeln
+      endif
+set n=`expr $n + 1`
+   end
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+set n='0'
+set modeln=`$VEDABIN/wholepath veda_tmp/${MOLE}/out${n}`
+ln -sf $modeln d/xyz${CONF}.d
+e/scat $CONF
+sed -e "/CYCLES/s/.*/ -1  50 0.001 0 CYCLES/" oicfd.i2 >! i/oicfd.i2
+./e/docking N0 N1
+echo ${n}' '`tail -1 N1 |sed -e 's/#//' |awk '{print $8}'` >! NORMA
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   if($INIT < 0) then
+$VEDABIN/addsym N0 N1 M0
+set n='-1'
+      while ($n >= $INIT)
+set modeln=`$VEDABIN/wholepath veda_tmp/${MOLE}/out${n}`
+ln -sf $modeln d/xyz${CONF}.d
+e/scat $CONF
+sed -e "/CYCLES/s/.*/ -1  50 0.001 0 CYCLES/" oicfd.i2 >! i/oicfd.i2
+./e/docking M0 M1
+$VEDABIN/addsym N0 M1 M0
+echo ${n}' '`tail -1 M1 |sed -e 's/#//' |awk '{print $8}'` >> NORMA
+set n=`expr $n - 1`
+      end
+rm -f M0 M1
+   endif
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   if($LAST > 0) then
+$VEDABIN/addsym N0 N1 M0
+set n=1
+      while ($n <= $LAST)
+set modeln=`$VEDABIN/wholepath veda_tmp/${MOLE}/out${n}`
+ln -sf $modeln d/xyz${CONF}.d
+e/scat $CONF
+sed -e "/CYCLES/s/.*/ -1  50 0.001 0 CYCLES/" oicfd.i2 >! i/oicfd.i2
+./e/docking M0 M1
+$VEDABIN/addsym N0 M1 M0
+echo ${n}' '`tail -1 M1 |sed -e 's/#//' |awk '{print $8}'` >> NORMA
+set n=`expr $n + 1`
+      end
+rm -f M0 M1
+   endif
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+sort -n NORMA >! NORMOD
+cat >! norma.gp <<"ENDOF"
+set title "CC vs #conformer"
+set xlabel "# conformer"
+plot 'NORMOD' using ($1):($2) with linespoints notitle
+"ENDOF"
+gnuplot -persist norma.gp
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+mv -f oicfd.i2 i/oicfd.i2
+rm -f d/xyz${CONF}.d f/tabl${CONF} o/tabl${CONF}.s HISTT NORMA
+"ENDOF e/norma"
+#=======================================================================
+echo e/splits
+cat >e/splits <<"ENDOF e/splits"
+#!/bin/csh -f
+# splits *************************************
+   if($#argv != 2) then
+echo "Usage: {e/splits} o/{fiting-in}.s o/{fiting-out}.s" ; exit
+   endif
+set VEDABIN="$VEDA/$VEDA_BIN"
+source $VEDABIN/entorno
+ln -s $cwd/o/${1}.s $UROF/fort.1
+ln -s $cwd/d/data.d $UROF/fort.8
+ln -s $cwd/o/${2}.s $UROF/fort.9
+set n="1"
+   while ($n <= 100)
+      if(-e $cwd/o/tabl$n.s) then
+set m=`expr $n + 10`
+ln -s $cwd/o/tabl$n.s $UROF/fort.$m
+      endif
+set n=`expr $n + 1`
+   end
+$VEDABIN/splits.exe <<EOF
+#1 > #4 #5 #6
+EOF
+rm -rf $UROF
+"ENDOF e/splits"
+#=======================================================================
+echo d/data.d
+   if(! -e ./d/data.d) then
+cat >d/data.d <<"ENDOF d/data.d"
+ ** URO **
+1. 1. 1. 90. 90. 90. CELL
+x,y,z * stop
+1                   ; orthogonalising code (PDB setting)
+100    0.           ; % reflections, b-add
+400.   15.          ; resolution range
+"ENDOF d/data.d"
+   endif
+#=======================================================================
+echo d/o2u.scr
+cat >d/o2u.scr <<"ENDOF d/o2u.scr"
+#!/bin/csh -f
+# o2u ****************************************
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   if(! -e gs.sym) then
+echo "file with O symmetry operations must be named gs.sym"
+echo "NEED gs.sym FILE" ; exit
+   endif
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cat >! prg.f <<"ENDOF prg.f"
+c ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      program o2u
+      implicit none
+      integer i,j,length,n
+      double precision alpha,beta,dtor,gamma,pi,rtod,symop,twopi,xt
+      character card*80
+      external length
+      dimension symop(3,3),xt(3)
+      common/angkte/ pi,twopi,dtor,rtod
+      pi=atan2(1.d0,1.d0)*4.d0
+      twopi=atan2(1.d0,1.d0)*8.d0
+      dtor=atan2(1.d0,1.d0)/45.d0
+      rtod=45.d0/atan2(1.d0,1.d0)
+      open(unit=1,file='gs.sym',form='formatted',status='old')
+      open(unit=2,file='SYM',form='formatted',status='unknown')
+      n=0
+       do i=1,80
+      card(i:i)=' '
+       enddo
+      card(65:65)='#'
+10    read(1,*,end=20)
+       do i=1,3
+      read(1,*) (symop(j,i),j=1,3)
+       enddo
+      read(1,*) xt
+      call rmx2e(symop,alpha,beta,gamma)
+      write(card(1:60),'(6f10.3)') alpha,beta,gamma,xt
+      card(66:68)='   '
+      n=n+1
+         if(n.lt.10) then
+      write(card(66:66),'(i1)') n
+         else if(n.lt.100) then
+      write(card(66:67),'(i2)') n
+         else
+      write(card(66:68),'(i3)') n
+         endif
+      write(2,'(a)') card(1:length(card))
+      go to 10
+20    stop
+      end
+c ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      function length(card)
+      implicit none
+      integer i,length
+      character card*80
+       do i=80,1,-1
+      if(card(i:i).ne.' ') go to 10
+       enddo
+10    length=i
+      return
+      end
+c ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      subroutine rmx2e(rotx,alpha,beta,gamma)
+      implicit none
+      double precision alpha,ang,beta,cang,dtor,fuzz,gamma,pi,rotx,rtod,
+     & sang,twopi
+      dimension rotx(3,3)
+      common/angkte/ pi,twopi,dtor,rtod
+      fuzz=0.001
+      cang=sqrt(min(max(2.d0-(rotx(1,3)**2+rotx(2,3)**2+rotx(3,1)**2+
+     . rotx(3,2)**2+rotx(3,3)**2),0.d0),1.d0))
+      ang=acos(sign(cang,rotx(3,3)))
+      sang=sin(ang)
+         if(sang.gt.fuzz) then
+      alpha=atan2(rotx(2,3),rotx(1,3))
+      gamma=atan2(rotx(3,2),-rotx(3,1))
+         else
+      alpha=atan2(-rotx(1,2),rotx(1,1)*rotx(3,3))
+      gamma=0.
+         endif
+      alpha=mod(twopi+alpha,twopi)*rtod
+      beta=ang*rtod
+      gamma=mod(twopi+gamma,twopi)*rtod
+      return
+      end
+"ENDOF prg.f"
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+$VEDA_COMPILE prg.f -o prg.exe
+./prg.exe
+rm -f prg.f prg.exe
+"ENDOF d/o2u.scr"
+#=======================================================================
+echo d/u2o.scr
+cat >d/u2o.scr <<"ENDOF d/u2o.scr"
+#!/bin/csh -f
+# u2o ****************************************
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   if(! -e SYM) then
+echo "file with URO symmetry operations must be named SYM"
+echo "NEED SYM FILE" ; exit
+   endif
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cat >! prg.f <<"ENDOF prg.f"
+c ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      program u2o
+      implicit none
+      integer S,i,ind,j,length
+      double precision alpha,beta,dtor,gamma,pi,rtod,symop,twopi,xt
+      character card*80,cart*80
+      external length
+      dimension symop(3,3),xt(3)
+      common/angkte/ pi,twopi,dtor,rtod
+      pi=atan2(1.d0,1.d0)*4.d0
+      twopi=atan2(1.d0,1.d0)*8.d0
+      dtor=atan2(1.d0,1.d0)/45.d0
+      rtod=45.d0/atan2(1.d0,1.d0)
+      open(unit=1,file='SYM',form='formatted',status='unknown')
+      open(unit=2,file='gs.sym',form='formatted',status='unknown')
+       do i=1,80
+      cart(i:i)=' '
+       enddo
+      cart(1:40)='.LSQ_RT_SYM       R     12  (3F12.6)    '
+10    read(1,'(a)',end=20) card
+      read(card,*) alpha,beta,gamma,(xt(j),j=1,3)
+      alpha=alpha*dtor
+      beta=beta*dtor
+      gamma=gamma*dtor
+      call rmxe(alpha,beta,gamma,symop)
+      ind=index(card,'#')
+      read(card(ind+1:80),*) S
+         if(S.lt.10) then
+      write(cart(12:14),'(i1,a2)') S
+         else if(S.lt.100) then
+      write(cart(12:14),'(i2,a1)') S
+         else
+      write(cart(12:15),'(i3)') S
+         endif
+      write(2,'(a)') cart(1:length(cart))
+cjn O usa la transpuesta
+       do j=1,3
+      write(2,'(3f12.6)') (symop(i,j),i=1,3)
+       enddo
+      write(2,'(3f12.6)') xt
+      go to 10
+20    stop
+      end
+c ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      function length(card)
+      implicit none
+      integer i,length
+      character card*80
+       do i=80,1,-1
+      if(card(i:i).ne.' ') go to 10
+       enddo
+10    length=i
+      return
+      end
+c ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      subroutine rmxe(alpha,beta,gamma,rotx)
+      implicit none
+      double precision alpha,beta,cosa,cosb,cosg,gamma,rotx,sina,sinb,
+     & sing
+      dimension rotx(3,3)
+      cosa=cos(alpha)
+      sina=sin(alpha)
+      cosb=cos(beta)
+      sinb=sin(beta)
+      cosg=cos(gamma)
+      sing=sin(gamma)
+      rotx(1,1)= cosa*cosb*cosg-sina*sing
+      rotx(1,2)=-cosa*cosb*sing-sina*cosg
+      rotx(1,3)= cosa*sinb
+      rotx(2,1)= sina*cosb*cosg+cosa*sing
+      rotx(2,2)=-sina*cosb*sing+cosa*cosg
+      rotx(2,3)= sina*sinb
+      rotx(3,1)=     -sinb*cosg
+      rotx(3,2)=      sinb*sing
+      rotx(3,3)=      cosb
+      return
+      end
+"ENDOF prg.f"
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+$VEDA_COMPILE prg.f -o prg.exe
+./prg.exe
+rm -f prg.f prg.exe
+"ENDOF d/u2o.scr"
+#=======================================================================
+echo e/emft
+cat >e/emft <<"ENDOF e/emft"
+#!/bin/csh -f
+# emft ***************************************
+   if($#argv != 1) then
+echo "Usage: {e/emft} {vtk-map}" ; exit
+   endif
+set VEDABIN="$VEDA/$VEDA_BIN"
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+set MAP=${1}
+   if(! -e ${MAP}) then
+echo "No map with this name = ${MAP}" ; exit
+   endif
+set emap=`$VEDABIN/wholepath $MAP`
+ln -sf $emap d/emap.d
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+$VEDABIN/v2d.exe <<EOF | egrep -e " set mr |CELL" >! LisT
+${MAP}
+BoX.v2d
+EOF
+set STOP=`awk '{if($7 !~ /CELL/){print 0}}' LisT`
+   if($STOP == 0) then
+echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+echo ">>>>>>>>>>>>>>>>>>>>>> problem with VTK map <<<<<<<<<<<<<<<<<<<<<<<<"
+echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+echo "stop : problem with VTK map" >> STOP
+cat LisT ; rm -f LisT BoX.v2d ; exit
+   endif
+set cell=`cat LisT`
+sed -e "s/.*CELL.*/CELL/" d/data.d >! LisT
+set STOP=`grep CELL LisT`
+   if($STOP != "CELL") then
+echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+echo ">>>>>>>>>>>>>>>>>>>>> no CELL card in data.d <<<<<<<<<<<<<<<<<<<<<<<"
+echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+echo "stop : no CELL card in data.d" >> STOP
+rm -f LisT BoX.v2d ; exit
+   endif
+sed -e "/CELL/s/CELL/${cell}/" LisT >! d/data.d
+set res=`grep "resolution range" d/data.d`
+rm -f LisT
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+source $VEDA/$VEDA_BIN/entorno
+ln -s $cwd/BoX.v2d $UROF/fort.1
+ln -s $cwd/d/hkl.d $UROF/fort.2
+$UROS/stfing.exe <<EOF
+stfing :
+ ** URO **
+${cell}
+x,y,z * end
+${res}
+0.                       ; additive b-fact.
+hkl                      ; ='hkl' or ='udi'
+EOF
+rm -rf $UROF BoX.v2d
+   if(! -e d/hkl.d) then
+echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+echo ">>>>>>>>>>>>>>>>>>>>>> problem with STFING <<<<<<<<<<<<<<<<<<<<<<<<<"
+echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+echo "stop : problem with STFING" >> STOP
+exit
+   endif
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+source $VEDA/$VEDA_BIN/entorno
+ln -s $cwd/d/data.d   $UROF/fort.8
+ln -s $cwd/i/oicfd.i2 $UROF/fort.10
+ln -s $cwd/i/sort.i1  $UROF/fort.11
+ln -s $cwd/i/tabl.i1  $UROF/fort.12
+$UROX/uro.exe < $cwd/i/dato.i3
+rm -rf $UROF
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+source $VEDA/$VEDA_BIN/entorno
+ln -s $cwd/d/hkl.d  $UROF/fort.1
+ln -s $cwd/o/sort.s $UROF/fort.9
+ln -s $cwd/f/xudi   $UROF/fort.10
+$UROX/uro.exe < $cwd/i/sort.i1
+grep '^stop' o/sort.s >> STOP
+rm -rf $UROF d/hkl.d
+set res=`grep 'selected rang' o/sort.s |awk '{printf "%9.1f %9.1f",$6,$8-0.05}'`
+set his=`grep 'HISTO' i/tabl.i1 | awk '{print $3}'`
+sed -i -e "/HISTO/s/.*/${res} ${his} HISTO/" i/tabl.i1
+"ENDOF e/emft"
+#=======================================================================
+echo e/fiting
+cat >e/fiting <<"ENDOF e/fiting"
+#!/bin/csh -f
+# fiting *************************************
+   if($#argv != 2) then
+echo "Usage: {e/fiting} i/{fiting-in}.i1 o/{fiting-out}.s" ; exit
+   endif
+source $VEDA/$VEDA_BIN/entorno
+ln -s $cwd/o/$2.s $UROF/fort.9
+ln -s $cwd/f/xudi $UROF/fort.10
+set n="1"
+   while ($n <= 100)
+      if(-e $cwd/f/tabl$n) then
+set m=`expr $n + 10`
+ln -s $cwd/f/tabl$n $UROF/fort.$m
+      endif
+set n=`expr $n + 1`
+   end
+$UROX/uro.exe < $cwd/i/$1.i1
+rm -rf $UROF
+"ENDOF e/fiting"
+#=======================================================================
+echo e/oic
+cat >e/oic <<"ENDOF e/oic"
+#!/bin/csh -f
+# oic ****************************************
+   if($#argv < 2) then
+echo "Usage: {e/oic} o/{fiting-out}.s i/{fiting-in}.i1" ; exit
+   endif
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   if(! -e o/${1}.s) then
+echo "No fiting output with this name = o/${1}.s" ; exit
+   endif
+   if(! -e symlist) then
+echo "NEED symlist FILE" ; exit
+   endif
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+source $VEDA/$VEDA_BIN/entorno
+ln -s $cwd/o/${1}.s  $UROF/fort.1
+ln -s $cwd/d/data.d  $UROF/fort.8
+ln -s $cwd/i/${2}.i1 $UROF/fort.9
+set n="1"
+      while ($n <= 100)
+   if(-e $cwd/o/tabl$n.s) then
+set m=`expr $n + 10`
+ln -s $cwd/o/tabl$n.s $UROF/fort.$m
+   endif
+set n=`expr $n + 1`
+      end
+$UROX/uro.exe < $cwd/i/oicfd.i2 >/dev/null
+rm -rf $UROF
+echo end >> i/${2}.i1
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+source $VEDA/$VEDA_BIN/entorno
+cat >! LisT <<"EOF"
+{
+   if($1 !~ /inertia/)
+      print
+   else
+      exit
+}
+"EOF"
+awk -f LisT i/${2}.i1 >! $UROF/fit.i1
+rm -rf LisT
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# generates symmetry operations to apply to the independent molecules in
+# the working cell. transforms symmetry operations into fractional and
+# subtracts the origin.
+set SYM=SYM
+set MAP=d/emap.d
+echo `head -20 ${MAP} | egrep -e "DIMENSIONS|SPACING|ORIGIN"` >! LisT
+cat >! LisT1 <<"EOF"
+{ printf "A=%8.3f;B=%8.3f;C=%8.3f;TX=%10.7f;TY=%10.7f;TZ=%10.7f\n",\
+ $2*$6,$3*$7,$4*$8,$10/($2*$6),$11/($3*$7),$12/($4*$8) }
+"EOF"
+awk -f LisT1 LisT |sed -e "s/[ ]*//g" >! LisT2
+set line=`cat LisT2`
+rm -f LisT LisT1 LisT2
+echo -n >! LisT1
+set num="0"
+   foreach sym (`cat symlist`)
+egrep -e "#${sym}"$ $SYM >> LisT1
+set num=`expr ${num} + 1`
+   end
+sed -e "/LINE/s/LINE/${line}/" <<"EOF" |sed -e "/NUMB/s/NUMB/${num}/" >! LisT2
+BEGIN { LINE ; printf "ncs %5d\n",NUMB }
+{ printf " %8.2f%8.2f%8.2f%10.5f%10.5f%10.5f      %s\n", \
+       $1,$2,$3,$4/A-TX,$5/B-TY,$6/C-TZ,$7 }
+"EOF"
+awk -f LisT2 LisT1 >> $UROF/fit.i1
+rm -f LisT1 LisT2
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cat >! LisT <<"EOF"
+{
+   if($1 == "inertia")
+   {
+      print
+      getline
+      while ($1 !~ /end/)
+      {
+         print
+         getline
+      }
+      exit
+   }
+}
+"EOF"
+awk -f LisT i/${2}.i1 >> $UROF/fit.i1
+sed -e "/printing/s/2    1 1    /4    1 1 0 1/" $UROF/fit.i1 | \
+sed -e "/ 1 1 1 /s/ 0 0 0 / 1 1 1 /" >! i/${2}.i1
+rm -rf LisT $UROF
+"ENDOF e/oic"
+#=======================================================================
+echo e/docking
+cat >e/docking <<"ENDOF e/docking"
+#!/bin/csh -f
+# docking ************************************
+   if($#argv < 2) then
+echo "Usage: {e/docking} {fiting-inp} {fiting-out}" ; exit
+   endif
+set VEDABIN="$VEDA/$VEDA_BIN"
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   if(! -e SYM || ! -e d/data.d || ! -e d/emap.d || ! -e f/xudi) then
+echo "NEED SYM d/data.d d/emap.d f/xudi" ; exit
+   endif
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   if(! -e ${1}) then
+echo "No fiting output with this name = ${1}" ; exit
+   endif
+   if(! -e symlist) then
+echo "NEED symlist FILE" ; exit
+   endif
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+$VEDABIN/rt2pv ${1} o/${1}.s
+$cwd/e/oic ${1} fit; $cwd/e/fiting fit ${2}
+set STOP=`awk '{if($1 ~ /stop/){print 1}}' o/${2}.s`
+if($STOP != 1) $VEDABIN/pv2rt o/${2}.s ${2}
+"ENDOF e/docking"
+#=======================================================================
+echo e/scat
+cat >e/scat <<"ENDOF e/scat"
+#!/bin/csh -f
+# scat ***************************************
+   if($#argv != 1) then
+echo "Usage: {e/scat} {model-nb}" ; exit
+   endif
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   if(! -e $cwd/d/xyz${1}.d && ! -e $cwd/d/map${1}.d) then
+echo "No model with this number = ${1}" ; exit
+   endif
+   if(! -e $cwd/i/tabl.i1) then
+echo "Must first execute e/emft" ; exit
+   endif
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+source $VEDA/$VEDA_BIN/entorno
+ln -s $cwd/d/xyz${1}.d   $UROF/fort.1
+ln -s $cwd/d/map${1}.d   $UROF/fort.2
+ln -s $VEDA/uro/factor.d $UROF/fort.3
+ln -s $cwd/o/tabl${1}.s  $UROF/fort.9
+ln -s $cwd/f/tabl${1}    $UROF/fort.10
+   if(-e $cwd/d/xyz${1}.d) then
+sed -e '/^map/s/map/xyz/' $cwd/i/tabl.i1 >! $UROF/tabl.i1
+   else if(-e $cwd/d/map${1}.d) then
+sed -e '/^xyz/s/xyz/map/' $cwd/i/tabl.i1 >! $UROF/tabl.i1
+   endif
+$UROX/uro.exe < $UROF/tabl.i1
+rm -rf $UROF
+"ENDOF e/scat"
+#=======================================================================
+echo i/dato.i3
+   if(! -e ./i/dato.i3) then
+cat >i/dato.i3 <<"ENDOF i/dato.i3"
+job  +*+*+*+*+*+*+*+*+*
+xyz-f-b 30.       model type
+1000              nb. trans. to fit
+0.                CoM cutoff
+21                histogram
+"ENDOF i/dato.i3"
+   endif
+#=======================================================================
+   if(! -e ./e/maitre.scr) then
+cp $VEDA/uro/maitre.scr e/maitre.scr
+   endif
+chmod +x e/* d/*.scr

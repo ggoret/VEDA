@@ -1,0 +1,19 @@
+#!/bin/csh
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+setenv VEDA_COMPILE "gfortran -Wall -O2 -m32 -static"
+setenv VEDA_BIN     "BIN_lin_32_gfortran_static"
+csh $VS/oruja ; csh makelib ; $VS/makepak $VEDA_BIN
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+setenv VEDA_COMPILE "gfortran -Wall -O2 -static"
+setenv VEDA_BIN     "BIN_lin_64_gfortran_static"
+csh $VS/oruja ; csh makelib ; $VS/makepak $VEDA_BIN
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+setenv VEDA_COMPILE "gfortran -Wall -O2 -m32"
+setenv VEDA_BIN     "BIN_lin_32_gfortran"
+csh $VS/oruja ; csh makelib ; $VS/makepak $VEDA_BIN
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+setenv VEDA_COMPILE "gfortran -Wall -O2"
+setenv VEDA_BIN     "BIN_lin_64_gfortran"
+csh $VS/oruja ; csh makelib ; $VS/makepak $VEDA_BIN
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+exit

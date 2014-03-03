@@ -1,0 +1,115 @@
+#!/bin/csh -f
+set VEDABIN="$VEDA/$VEDA_BIN"
+#=======================================================================
+echo uro.f
+cat >uro.f <<"ENDOF uro.f"
+c ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      program uro
+      implicit none
+      integer iecr,ii,ilec,iout,kprt,ma,mc,mi,mr
+      real rr
+      complex cc
+      character aa*4,forme*40,formr*40,zn*1
+      parameter(mi=9000000,mr=9000000,mc=9000000,ma=300000)
+      dimension aa(ma),cc(mc),ii(mi),rr(mr)
+      common/ioprg/ ilec,iecr,kprt,iout,formr,forme,zn
+      ilec=5
+      iecr=6
+      kprt=0
+      iout=9
+      zn='#'
+      formr='(2x,i2,       3f7.1,3f8.4,  1x,4f6.1   )'
+      forme='(1x,a1,i2,    3f7.1,3f8.4,  1x,4f6.1   )'
+c mi=nrt, mc=mt+nrt
+      call amiga(mi,mr,mc,ma,ii,rr,cc,aa)
+      stop
+      end
+"ENDOF uro.f"
+$VEDA_COMPILE uro.f $VEDABIN/esclave.a -o e/uro.exe
+rm -f uro.f
+#=======================================================================
+echo udi2i.f
+cat >udi2i.f <<"ENDOF udi2i.f"
+c ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      program udi2i
+      implicit none
+      integer iecr,ii,ilec,iout,kprt,md,nr
+      real rr
+      complex cc
+      character cbid1*1
+      parameter(md=100000,nr=10000000)
+      dimension cc(nr),ii(md+3*nr),rr(2*md)
+      common/ioprg/ ilec,iecr,kprt,iout,cbid1(81)
+      ilec=5
+      iecr=6
+      kprt=0
+      iout=9
+      call udi4i(md,nr,ii(1),ii(1+md),rr(1),cc(1))
+      stop
+      end
+"ENDOF udi2i.f"
+$VEDA_COMPILE udi2i.f $VEDABIN/esclave.a -o e/udi2i.exe
+rm -f udi2i.f
+#=======================================================================
+echo tab2i.f
+cat >tab2i.f <<"ENDOF tab2i.f"
+c ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      program tab2i
+      implicit none
+      integer iecr,ilec,iout,kprt,mc
+      complex cc
+      character cbid1*1
+      parameter(mc=10000000)
+      dimension cc(mc)
+      common/ioprg/ ilec,iecr,kprt,iout,cbid1(81)
+      ilec=5
+      iecr=6
+      kprt=0
+      iout=9
+      call tab4i(mc,cc(1))
+      stop
+      end
+"ENDOF tab2i.f"
+$VEDA_COMPILE tab2i.f $VEDABIN/esclave.a -o e/tab2i.exe
+rm -f tab2i.f
+#=======================================================================
+echo fitin.f
+cat >fitin.f <<"ENDOF fitin.f"
+c ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      program fitin
+      implicit none
+      integer iecr,ii,ilec,mc,mi
+      complex cc
+      parameter(mi=1000000,mc=10000000)
+      dimension cc(mc),ii(mi)
+      common/ioprg/ ilec,iecr
+      ilec=5
+      iecr=6
+      call fittin(mi,mc,ii,cc)
+      stop
+      end
+"ENDOF fitin.f"
+$VEDA_COMPILE fitin.f $VEDABIN/esclava.a -o e/fitin.exe
+rm -f fitin.f
+#=======================================================================
+echo stfing.f
+cat >stfing.f <<"ENDOF stfing.f"
+c ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      program stfing
+      implicit none
+      integer iecr,ii,ilec,kprt,mc,mi,mr,nd
+      real rr
+      complex cc
+      parameter(mi=9000000,mr=9000000,mc=9000000)
+      dimension cc(mc),ii(mi),rr(mr)
+      common/ioprg/ ilec,iecr,kprt
+      ilec=5
+      iecr=6
+      kprt=1
+      nd=1000
+      call stfndo(nd,mi,mr,mc,ii,rr,cc)
+      stop
+      end
+"ENDOF stfing.f"
+$VEDA_COMPILE stfing.f $VEDABIN/esclavo.a -o e/stfing.exe
+rm -f stfing.f

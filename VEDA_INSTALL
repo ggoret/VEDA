@@ -1,0 +1,121 @@
+
+============================================================
+============================================================
+The commands to type are indicated by ">>>>"
+The outputs are indicated by "->"
+============================================================
+============================================================
+Download the package adapted to your architecture (32 or 64 bits):
+
+>>>> wget http://mem.ibs.fr/CODES/VEDA_32_gfortran.tgz
+or 
+>>>> wget http://mem.ibs.fr/CODES/VEDA_64_gfortran.tgz
+
+>>>> tar zxvf VEDA_??_gfortran.tgz
+
+This will create the directory VEDA and put within it subdirectories and
+two files: "VEDA_INSTALL" (like the one you are now reading) and "login".
+============================================================
+============================================================
+To use VEDA you NEED the environment variables defined in "login". Only the
+variable VEDA (whole-path to directory VEDA) must be customized.
+You may need the compiler used to create the binaries, specified by the
+variable VEDA_COMPILE (compiler with options) and gnuplot, usually installed
+during the Ubuntu installation.
+============================================================
+============================================================
+PACKAGES MUST BE INSTALLED IN THE ORDER PRESENTED BELOW.
+============================================================
+============================================================
+"apti" is an alias for "sudo apt-get install"
+============================================================
+============================================================
+
+------------------------------------------------------------
+>>>> apti tk8.5
+
+-> the following packages will be installed:
+->   tcl8.5 tk8.5
+
+------------------------------------------------------------
+Usually, python is installed during the Ubuntu installation.
+In any case,
+
+>>>> apti python
+
+-> python is already the newest version available.
+
+To know the version, type
+
+>>>> python
+
+-> Python 2.6.5 (r265:79063, Apr 16 2010, 13:09:56)
+-> [GCC 4.4.3] on linux2
+
+(to quit, Ctl D).
+
+------------------------------------------------------------
+>>>> apti python-tk
+
+-> the following packages will be installed:
+->   blt python-tk
+
+------------------------------------------------------------
+The python package installed by Ubuntu was not compiled with tk8.5. You need
+to install the pyttk patch in order to access to the new features of tk8.5 .
+So, download
+
+>>>> wget http://pypi.python.org/packages/source/p/pyttk/pyttk-0.3.2.tar.gz
+
+and install it:
+
+>>>> tar xvzf pyttk-0.3.2.tar.gz
+>>>> cd pyttk-0.3.2/
+>>>> sudo python setup.py install
+
+------------------------------------------------------------
+>>>> apti python-numpy
+
+-> the following packages will be installed:
+->   libblas3gf liblapack3gf python-numpy
+
+------------------------------------------------------------
+>>>> apti python-vtk
+
+-> the following packages will be installed:
+->   libavcodec52 libavformat52 libavutil49 libgfortran3 libgl2ps0 libgsm1
+->   libibverbs1 libmysqlclient16 libnuma1 libopenmpi1.3 libschroedinger-1.0-0
+->   libswscale0 libvtk5.2 mysql-common python-vtk
+
+------------------------------------------------------------
+If you start VEDA, you get:
+
+-> Warning : Ipython not installed.
+->  VEDA will run anyway, but you will not get access to debug model.
+-> Warning : Python-Opengl not installed.
+->  VEDA will run anyway, but you will not get depth effect.
+
+but it will run anyway. To use the "fog" you have to install python-opengl;
+to use an embedded python shell and manipulate VEDA in command line (for
+advanced users only) you have to install ipython:
+
+------------------------------------------------------------
+>>>> apti python-opengl
+
+-> the following packages will be installed:
+->   freeglut3 python-opengl
+
+------------------------------------------------------------
+>>>> apti ipython
+
+-> the following packages will be installed:
+->   global ipython libwxbase2.8-0 libwxgtk2.8-0 python-foolscap python-wxgtk2.8
+->   python-wxversion
+
+You MUST start ipython once after installation:
+
+>>>> ipython
+
+(to quit, Ctl D).
+
+------------------------------------------------------------
